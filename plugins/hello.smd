@@ -1,9 +1,0 @@
-// hello.smd
-module.exports = {
-    name: 'hello', // Command name
-    description: 'Responds with Hello, World!',
-    command: /^hello$/, // Trigger command
-    handler: async (message) => {
-        await message.reply('Hello, World!');
-    }
-};
