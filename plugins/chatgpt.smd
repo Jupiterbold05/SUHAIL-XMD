@@ -26,50 +26,60 @@
 */
 
 // Import required libraries
-const axios = require('axios');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-
-// Your OpenAI API key
-const OPENAI_API_KEY = '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';
-
-// Create a new client instance
-const client = new Client({
-    authStrategy: new LocalAuth(),
-});
-
-// Function to send a message to OpenAI and get a response
-async function getChatGPTResponse(prompt) {
+smd (
+  {
+    pattern: "gpt",
+    react: "🤖",
+    desc: "Get a response from Bing AI based on user query.",
+    category: "ai",
+    filename: __filename,
+  },
+  async (m) => {
     try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-            model: 'gpt-3.5-turbo',
-            messages: [{ role: 'user', content: prompt }],
-        }, {
-            headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-        });
+      const userId = m.from; // Unique user ID to track conversations
+      const query = m.text.split(' ').slice(1).join(' ');
 
-        return response.data.choices[0].message.content.trim();
-    } catch (error) {
-        console.error('Error fetching response from OpenAI:', error);
-        return 'Sorry, I could not fetch a response at the moment.';
+      if (!query) {
+        return await m.send("Please provide a query, e.g., `.gpt What is life?`.");
+      }
+
+      // Initialize history for the user if not already present
+      if (!conversationHistory[userId]) {
+        conversationHistory[userId] = [];
+      }
+
+      // Add the user's query to the conversation history
+      conversationHistory[userId].push({ from: "user", message: query });
+
+      // Send a loading message
+      await m.send("Alya is thinking 🤔");
+
+      // Optionally, send the entire conversation history to the API
+      const historyText = conversationHistory[userId].map(entry => entry.message).join('\n');
+      const apiUrl = `https://widipe.com/gpt4?text=${encodeURIComponent(historyText)}`;
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        return await m.send(`*_Error: ${response.status} ${response.statusText}_*`);
+      }
+
+      // Wait for 2 seconds to simulate thinking
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Get the result from the API response
+      const data = await response.json();
+      const resultText = data.result; // Extract the text from the result part
+
+      // Add the bot's response to the conversation history
+      conversationHistory[userId].push({ from: "bot", message: resultText });
+
+      // Format the final message
+      const message = `*Response:* \n\n${resultText}`;
+
+      // Send the final response
+      await m.send(message);
+    } catch (e) {
+      await m.error(`${e}\n\ncommand: gpt`, e);
     }
-}
-
-// Listen for incoming messages
-client.on('message', async (msg) => {
-    if (msg.body.startsWith('!chatgpt ')) {
-        const userPrompt = msg.body.replace('!chatgpt ', '');
-        const chatGptResponse = await getChatGPTResponse(userPrompt);
-        msg.reply(chatGptResponse);
-    }
-});
-
-// Client ready event
-client.on('ready', () => {
-    console.log('Suhail-Md WhatsApp Bot is ready!');
-});
-
-// Initialize the WhatsApp client
-client.initialize();
+  }
+);
