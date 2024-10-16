@@ -1,0 +1,43 @@
+const axios = require('axios');
+
+module.exports = {
+  cmdname: "chatgpt",
+  desc: "Ask ChatGPT anything!",
+  type: "chat",
+  react: "🤖",
+  filename: __filename,
+  async execute(m) {
+    const query = m.body.slice(9).trim(); // Extract the query from the command, e.g., "!chatgpt What is the weather like?"
+
+    if (!query) {
+      return m.reply("Please provide a question. Usage: !chatgpt <your question>");
+    }
+
+    const openaiApiKey = "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"; // Your OpenAI API key
+
+    try {
+      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: query }],
+        max_tokens: 150, // Adjust the max tokens based on your needs
+      }, {
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const answer = response.data.choices[0].message.content; // Get the response from ChatGPT
+      await m.reply(answer);
+    } catch (error) {
+      // Enhanced logging
+      console.error(`Error fetching ChatGPT response: ${error.message}`);
+      if (error.response) {
+        console.error(`Response Data: ${JSON.stringify(error.response.data)}`);
+        await m.reply(`Error: ${error.response.data.error.message}. Please try again later.`);
+      } else {
+        await m.reply("Could not retrieve a response. Please try again later.");
+      }
+    }
+  }
+}
