@@ -1,43 +1,75 @@
+/**
+//══════════════════════════════════════════════════════════════════════════════════════════════════════//
+//                                                                                                      //
+//                                ＷＨＡＴＳＡＰＰ ＢＯＴ－ＭＤ ＢＥＴＡ                                   //
+//                                                                                                      // 
+//                                         Ｖ：1．2．9                                                   // 
+//                                                                                                      // 
+//            ███████╗██╗   ██╗██╗  ██╗ █████╗ ██╗██╗         ███╗   ███╗██████╗                        //
+//            ██╔════╝██║   ██║██║  ██║██╔══██╗██║██║         ████╗ ████║██╔══██╗                       //
+//            ███████╗██║   ██║███████║███████║██║██║         ██╔████╔██║██║  ██║                       //
+//            ╚════██║██║   ██║██╔══██║██╔══██║██║██║         ██║╚██╔╝██║██║  ██║                       //
+//            ███████║╚██████╔╝██║  ██║██║  ██║██║███████╗    ██║ ╚═╝ ██║██████╔╝                       //
+//            ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝    ╚═╝     ╚═╝╚═════╝                        //
+//                                                                                                      //
+//                                                                                                      //
+//══════════════════════════════════════════════════════════════════════════════════════════════════════//
+*
+   * @project_name : Suhail-Md
+   * @author : Suhail Tech Info
+   * @youtube : https://www.youtube.com/@SuhailTechInfo
+   * @description : Suhail-Md , A Multi-functional whatsapp user bot.
+   * @version 1.2.9
+*
+   * Created By Suhail Tech Info.
+   * © 2024 Suhail-Md.
+*/
+
+// Import required libraries
 const axios = require('axios');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 
-module.exports = {
-  cmdname: "chatgpt",
-  desc: "Ask ChatGPT anything!",
-  type: "chat",
-  react: "🤖",
-  filename: __filename,
-  async execute(m) {
-    const query = m.body.slice(9).trim(); // Extract the query from the command, e.g., "!chatgpt What is the weather like?"
+// Your OpenAI API key
+const OPENAI_API_KEY = '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';
 
-    if (!query) {
-      return m.reply("Please provide a question. Usage: !chatgpt <your question>");
-    }
+// Create a new client instance
+const client = new Client({
+    authStrategy: new LocalAuth(),
+});
 
-    const openaiApiKey = "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"; // Your OpenAI API key
-
+// Function to send a message to OpenAI and get a response
+async function getChatGPTResponse(prompt) {
     try {
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: query }],
-        max_tokens: 150, // Adjust the max tokens based on your needs
-      }, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        }
-      });
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: prompt }],
+        }, {
+            headers: {
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+        });
 
-      const answer = response.data.choices[0].message.content; // Get the response from ChatGPT
-      await m.reply(answer);
+        return response.data.choices[0].message.content.trim();
     } catch (error) {
-      // Enhanced logging
-      console.error(`Error fetching ChatGPT response: ${error.message}`);
-      if (error.response) {
-        console.error(`Response Data: ${JSON.stringify(error.response.data)}`);
-        await m.reply(`Error: ${error.response.data.error.message}. Please try again later.`);
-      } else {
-        await m.reply("Could not retrieve a response. Please try again later.");
-      }
+        console.error('Error fetching response from OpenAI:', error);
+        return 'Sorry, I could not fetch a response at the moment.';
     }
-  }
 }
+
+// Listen for incoming messages
+client.on('message', async (msg) => {
+    if (msg.body.startsWith('!chatgpt ')) {
+        const userPrompt = msg.body.replace('!chatgpt ', '');
+        const chatGptResponse = await getChatGPTResponse(userPrompt);
+        msg.reply(chatGptResponse);
+    }
+});
+
+// Client ready event
+client.on('ready', () => {
+    console.log('Suhail-Md WhatsApp Bot is ready!');
+});
+
+// Initialize the WhatsApp client
+client.initialize();
